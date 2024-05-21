@@ -1,0 +1,2 @@
+SOFTWARE.CordOS.Kernel.Services.GoogleDrive.WebhookURL=
+SOFTWARE.CordOS.Kernel.Services.GoogleDrive.Credentials=storage/services/GoogleDriveTracker/credentials.json

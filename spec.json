@@ -1,0 +1,31 @@
+{
+    "spec": "CordOSInstallablePackage",
+    "specv": 1,
+    "sdk": 1,
+    "name": "htbtob-googledrive-tracker",
+    "version": "1.0.0",
+    "author": "Hoyoun Song",
+    "build": 1,
+    "arch": "any",
+    "description": "This tracks difference made in Google Drive, specifically for HTBToB. This tracks file/folder move, create, and delete.",
+    "payloads": {
+        "core": "https://github.com/dev/<repo>/archive/<branch>.zip"
+    },
+    "dependencies": {
+        "system": {
+            "version": ">=1.0",
+            "build": 1
+        }
+    },
+    "conflicts": {},
+    "pip": [
+        "package1==1.0.0",
+        "package2"
+    ],
+    "procedure": [
+        {
+            "task": "install",
+            "package": "core"
+        }
+    ]
+}

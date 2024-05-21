@@ -1,0 +1,8 @@
+{
+    "id": "me.410-dev.NanoPyOS.GoogleDriveTracker",
+    "name": "GoogleDriveTracker",
+    "role": "extension",
+    "sdk": 1,
+    "stage": 3,
+    "sync": false
+}
