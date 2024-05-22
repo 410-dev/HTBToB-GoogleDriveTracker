@@ -102,7 +102,7 @@ def index(tree: dict) -> list:
 
 
 def main():
-    if not PartitionManager.Data.isFile("services/GoogleDriveTracker/credentials.json"):
+    if not PartitionManager.RootFS.isFile(Registry.read("SOFTWARE.CordOS.Kernel.Services.GoogleDrive.Credentials", default="storage/services/GoogleDriveTracker/credentials.json")):
         Journaling.record("ERROR", "Missing credentials.json")
         IO.println("Google Drive Tracker failed to start: Missing credentials.json")
         return
@@ -110,6 +110,7 @@ def main():
     Journaling.record("INFO", "Google Drive Tracker started")
     originalIndex = index(restructure(pullFileList()))
     Journaling.record("INFO", "Initial index created")
+    Journaling.record("INFO", f"Initial index: {originalIndex}")
     while IPC.canRepeatUntilShutdown():
         time.sleep(3)
         newIndex = index(restructure(pullFileList()))
