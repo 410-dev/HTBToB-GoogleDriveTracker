@@ -7,6 +7,8 @@ import kernel.registry as Registry
 import kernel.io as IO
 import kernel.partitionmgr as PartitionManager
 
+from kernel.objects.embedmsg import EmbeddedMessage
+
 from googleapiclient.discovery import build
 from google.oauth2 import service_account
 
@@ -81,7 +83,7 @@ def traceDifference(oldIndex: list, newIndex: list) -> list:
         if searchedItem is None:
             diff.append(("add", None, item[1]))
         elif searchedItem[1] != item[1]:
-            diff.append(("edit", searchedItem[1], item[1]))
+            diff.append(("rename", searchedItem[1], item[1]))
     for item in oldIndex:
         searchedItem = search(newIndex, item[0])
         if searchedItem is None:
@@ -111,6 +113,13 @@ def main():
     originalIndex = index(restructure(pullFileList()))
     Journaling.record("INFO", "Initial index created")
     Journaling.record("INFO", f"Initial index: {originalIndex}")
+
+    def dropRoot(path: str) -> str:
+        pathComponents = path.split("/")
+        if len(pathComponents) > 2:
+            pathComponents.pop(0)
+        return "/".join(pathComponents)
+
     while IPC.canRepeatUntilShutdown():
         time.sleep(3)
         newIndex = index(restructure(pullFileList()))
@@ -119,20 +128,68 @@ def main():
         for item in diff:
             if item[0] == "add":
                 Journaling.record("INFO", f"New file added: {item[2]}")
-                outputStr += f"New file added: {item[2]}\n"
+                outputStr += f"**Added**\n{dropRoot(item[2])}\n\n"
+
             elif item[0] == "remove":
-                Journaling.record("INFO", f"File removed: {item[2]}")
-                outputStr += f"File removed: {item[2]}\n"
-            elif item[0] == "edit":
-                Journaling.record("INFO", f"File edited: {item[1]} -> {item[2]}")
-                outputStr += f"File edited: {item[1]} -> {item[2]}\n"
+                Journaling.record("INFO", f"File removed: {item[1]}")
+                outputStr += f"**Removed**\n{dropRoot(item[1])}\n\n"
+
+            elif item[0] == "rename":
+                Journaling.record("INFO", f"File moved: {item[1]} -> {item[2]}")
+                backupOutputStr = outputStr
+                outputStr += f"**State Changed**\n"
+                # outputStr += f"From: {dropRoot(item[1])}\n"
+                # outputStr += f"To: {dropRoot(item[2])}\n\n"
+                fileName = item[1].split("/")[-1]
+                if "Draft" in item[1]:
+                    originalState = "Draft"
+                elif "Feedback Queue" in item[1]:
+                    originalState = "Feedback Queue"
+                elif "Archive" in item[1]:
+                    originalState = "Archive"
+                elif "Published" in item[1]:
+                    originalState = "Published"
+                else:
+                    originalState = "Unsorted"
+                if "Draft" in item[2]:
+                    newState = "Draft"
+                elif "Feedback Queue" in item[2]:
+                    newState = "Feedback Queue"
+                elif "Archive" in item[2]:
+                    newState = "Archive"
+                elif "Published" in item[2]:
+                    newState = "Published"
+                else:
+                    newState = "Unsorted"
+                outputStr += f"「 {fileName} 」\n"
+                outputStr += f"From: {originalState}\n"
+                outputStr += f"To: {newState}\n\n"
+
+                if originalState == newState:
+                    outputStr = backupOutputStr
+
         originalIndex = newIndex
         try:
             if outputStr == "":
                 Journaling.record("INFO", "No changes detected")
             else:
-                Journaling.record("INFO", "Sending webhook")
-                Webhook.send(Registry.read("SOFTWARE.CordOS.Kernel.Services.GoogleDrive.WebhookURL", default="", writeDefault=True), outputStr)
-                Journaling.record("INFO", "Webhook sent")
+                # Webhook.send(Registry.read("SOFTWARE.CordOS.Kernel.Services.GoogleDrive.WebhookURL", default="", writeDefault=True), outputStr)
+                webhookUrl = Registry.read("SOFTWARE.CordOS.Kernel.Services.GoogleDrive.WebhookURL", default="", writeDefault=True)
+                Journaling.record("INFO", f"Sending webhook (URL: {webhookUrl})")
+                message = EmbeddedMessage(
+                    message=None,
+                    title="Google Drive Tracker",
+                    description=outputStr,
+                    color=0x00ff00,
+                    footer="Google Drive Tracker"
+                )
+                try:
+                    # CoroutineResolve.runAsync(message.sendAsWebhook)
+                    Webhook.sendEmbed(webhookUrl, message)
+                    Journaling.record("INFO", "Webhook sent")
+                except Exception as e:
+                    import traceback
+                    traceback.print_exc()
+                    Journaling.record("ERROR", "Failed to send webhook as embed message: " + str(e))
         except Exception as e:
-            Journaling.record("ERROR", "Failed to send webhook")
+            Journaling.record("ERROR", "Failed creating webhook message: " + str(e))
