@@ -19,9 +19,15 @@ def pullFileList():
     credentialJson = Registry.read("SOFTWARE.CordOS.Kernel.Services.GoogleDrive.Credentials", default="storage/services/GoogleDriveTracker/credentials.json", writeDefault=True)
     credentials = service_account.Credentials.from_service_account_file(credentialJson, scopes=['https://www.googleapis.com/auth/drive'])
     service = build("drive", "v3", credentials=credentials)
-    results = service.files().list(fields="files(name, kind, id, name, parents)").execute()
-    items = results.get('files', [])
-    return {"files": items}
+    while True:
+        try:
+            results = service.files().list(fields="files(name, kind, id, name, parents)").execute()
+            items = results.get('files', [])
+            return {"files": items}
+        except Exception as e:
+            Journaling.record("ERROR", "Failed to pull file list: " + str(e))
+            Journaling.record("INFO", "Retrying in 5 seconds")
+            time.sleep(5)
 
 
 def restructure(input_data: dict) -> dict:
@@ -121,75 +127,91 @@ def main():
         return "/".join(pathComponents)
 
     while IPC.canRepeatUntilShutdown():
-        time.sleep(3)
-        newIndex = index(restructure(pullFileList()))
-        diff = traceDifference(originalIndex, newIndex)
-        outputStr = ""
-        for item in diff:
-            if item[0] == "add":
-                Journaling.record("INFO", f"New file added: {item[2]}")
-                outputStr += f"**Added**\n{dropRoot(item[2])}\n\n"
-
-            elif item[0] == "remove":
-                Journaling.record("INFO", f"File removed: {item[1]}")
-                outputStr += f"**Removed**\n{dropRoot(item[1])}\n\n"
-
-            elif item[0] == "rename":
-                Journaling.record("INFO", f"File moved: {item[1]} -> {item[2]}")
-                backupOutputStr = outputStr
-                outputStr += f"**State Changed**\n"
-                # outputStr += f"From: {dropRoot(item[1])}\n"
-                # outputStr += f"To: {dropRoot(item[2])}\n\n"
-                fileName = item[1].split("/")[-1]
-                if "Draft" in item[1]:
-                    originalState = "Draft"
-                elif "Feedback Queue" in item[1]:
-                    originalState = "Feedback Queue"
-                elif "Archive" in item[1]:
-                    originalState = "Archive"
-                elif "Published" in item[1]:
-                    originalState = "Published"
-                else:
-                    originalState = "Unsorted"
-                if "Draft" in item[2]:
-                    newState = "Draft"
-                elif "Feedback Queue" in item[2]:
-                    newState = "Feedback Queue"
-                elif "Archive" in item[2]:
-                    newState = "Archive"
-                elif "Published" in item[2]:
-                    newState = "Published"
-                else:
-                    newState = "Unsorted"
-                outputStr += f"「 {fileName} 」\n"
-                outputStr += f"From: {originalState}\n"
-                outputStr += f"To: {newState}\n\n"
-
-                if originalState == newState:
-                    outputStr = backupOutputStr
-
-        originalIndex = newIndex
         try:
-            if outputStr == "":
-                Journaling.record("INFO", "No changes detected")
-            else:
-                # Webhook.send(Registry.read("SOFTWARE.CordOS.Kernel.Services.GoogleDrive.WebhookURL", default="", writeDefault=True), outputStr)
-                webhookUrl = Registry.read("SOFTWARE.CordOS.Kernel.Services.GoogleDrive.WebhookURL", default="", writeDefault=True)
-                Journaling.record("INFO", f"Sending webhook (URL: {webhookUrl})")
-                message = EmbeddedMessage(
-                    message=None,
-                    title="Google Drive Tracker",
-                    description=outputStr,
-                    color=0x00ff00,
-                    footer="Google Drive Tracker"
-                )
-                try:
-                    # CoroutineResolve.runAsync(message.sendAsWebhook)
-                    Webhook.sendEmbed(webhookUrl, message)
-                    Journaling.record("INFO", "Webhook sent")
-                except Exception as e:
-                    import traceback
-                    traceback.print_exc()
-                    Journaling.record("ERROR", "Failed to send webhook as embed message: " + str(e))
+            time.sleep(3)
+            newIndex = index(restructure(pullFileList()))
+            diff = traceDifference(originalIndex, newIndex)
+            outputStr = ""
+            for item in diff:
+                if item[0] == "add":
+                    Journaling.record("INFO", f"New file added: {item[2]}")
+                    outputStr += f"**Added**\n{dropRoot(item[2])}\n\n"
+
+                elif item[0] == "remove":
+                    Journaling.record("INFO", f"File removed: {item[1]}")
+                    outputStr += f"**Removed**\n{dropRoot(item[1])}\n\n"
+
+                elif item[0] == "rename":
+                    Journaling.record("INFO", f"File moved: {item[1]} -> {item[2]}")
+                    backupOutputStr = outputStr
+                    outputStr += f"**State Changed**\n"
+                    # outputStr += f"From: {dropRoot(item[1])}\n"
+                    # outputStr += f"To: {dropRoot(item[2])}\n\n"
+                    fileName = item[1].split("/")[-1]
+                    if "Draft" in item[1]:
+                        originalState = "Draft"
+                    elif "Feedback Queue" in item[1]:
+                        originalState = "Feedback Queue"
+                    elif "Archive" in item[1]:
+                        originalState = "Archive"
+                    elif "Published" in item[1]:
+                        originalState = "Published"
+                    else:
+                        originalState = "Unsorted"
+                    if "Draft" in item[2]:
+                        newState = "Draft"
+                    elif "Feedback Queue" in item[2]:
+                        newState = "Feedback Queue"
+                    elif "Archive" in item[2]:
+                        newState = "Archive"
+                    elif "Published" in item[2]:
+                        newState = "Published"
+                    else:
+                        newState = "Unsorted"
+                    outputStr += f"「 {fileName} 」\n"
+                    outputStr += f"From: {originalState}\n"
+                    outputStr += f"To: {newState}\n\n"
+
+                    if originalState == newState:
+                        outputStr = backupOutputStr
+                        outputStr += f"**Renamed**\n{dropRoot(item[1])} -> {dropRoot(item[2])}\n\n"
+
+            originalIndex = newIndex
+            try:
+                if outputStr == "":
+                    Journaling.record("INFO", "No changes detected")
+                else:
+                    # Webhook.send(Registry.read("SOFTWARE.CordOS.Kernel.Services.GoogleDrive.WebhookURL", default="", writeDefault=True), outputStr)
+                    webhookUrl = Registry.read("SOFTWARE.CordOS.Kernel.Services.GoogleDrive.WebhookURL", default="", writeDefault=True)
+                    Journaling.record("INFO", f"Sending webhook (URL: {webhookUrl})")
+                    message = EmbeddedMessage(
+                        message=None,
+                        title="Google Drive Tracker",
+                        description=outputStr,
+                        color=0x00ff00,
+                        footer="Google Drive Tracker"
+                    )
+                    try:
+                        # CoroutineResolve.runAsync(message.sendAsWebhook)
+                        Webhook.sendEmbed(webhookUrl, message)
+                        Journaling.record("INFO", "Webhook sent")
+                    except Exception as e:
+                        import traceback
+                        traceback.print_exc()
+                        Journaling.record("ERROR", "Failed to send webhook as embed message: " + str(e))
+                        stackTrace = traceback.format_exc()
+                        Webhook.send(webhookUrl, "Warning: Failed to send webhook as embed message. Stack trace:\n" + stackTrace)
+                        Webhook.send(webhookUrl, outputStr)
+            except Exception as e:
+                Journaling.record("ERROR", "Failed creating webhook message: " + str(e))
+                import traceback
+                traceback.print_exc()
+                stackTrace = traceback.format_exc()
+                Webhook.send(Registry.read("SOFTWARE.CordOS.Kernel.Services.GoogleDrive.WebhookURL", default="", writeDefault=True), "Warning: Failed creating webhook message. Stack trace:\n" + stackTrace)
+                Webhook.send(Registry.read("SOFTWARE.CordOS.Kernel.Services.GoogleDrive.WebhookURL", default="", writeDefault=True), outputStr)
         except Exception as e:
-            Journaling.record("ERROR", "Failed creating webhook message: " + str(e))
+            Journaling.record("ERROR", "Error in main loop: " + str(e))
+            import traceback
+            traceback.print_exc()
+            stackTrace = traceback.format_exc()
+            Webhook.send(Registry.read("SOFTWARE.CordOS.Kernel.Services.GoogleDrive.WebhookURL", default="", writeDefault=True), "Warning: Error in main loop. Stack trace:\n" + stackTrace)
