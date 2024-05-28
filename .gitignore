@@ -1,5 +1,5 @@
 kernel/*
 etc/*
-storage/services/GoogleDriveTracker/credentials.json
+GoogleDriveTracker/credentials.json
 *__pycache__*
 .idea/*

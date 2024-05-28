@@ -11,5 +11,6 @@
     "arch": "any",
     "platform": "any",
     "scope": "$storage/services",
-    "git": "https://github.com/410-dev/HTBToB-GoogleDriveTracker.git"
+    "git": "https://github.com/410-dev/HTBToB-GoogleDriveTracker.git",
+    "autowrap": false
 }
