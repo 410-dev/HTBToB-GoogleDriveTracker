@@ -1,28 +1,15 @@
 {
-    "spec": "CordOSInstallablePackage",
+    "spec": "NanoPyOS.Standards.PackageSpec",
     "specv": 1,
     "sdk": 1,
-    "name": "htbtob-googledrive-tracker",
+    "name": "HTBToB Google Drive Tracker",
+    "id": "htbtob-google-drive-tracker",
     "version": "1.0.0",
-    "author": "Hoyoun Song",
+    "author": "LKS410",
+    "description": "A package that tracks the Google Drive of HTBToB",
     "build": 1,
     "arch": "any",
-    "description": "This tracks difference made in Google Drive, specifically for HTBToB. This tracks file/folder move, create, and delete.",
-    "payloads": {
-        "core": "https://github.com/410-dev/HTBToB-GoogleDriveTracker/archive/refs/tags/1.0alpha3.zip"
-    },
-    "dependencies": {
-        "system": {
-            "version": ">=1.0",
-            "build": 1
-        }
-    },
-    "conflicts": {},
-    "pip": [],
-    "procedure": [
-        {
-            "task": "install",
-            "package": "core"
-        }
-    ]
+    "platform": "posix",
+    "scope": "$storage/commands",
+    "git": "https://github.com/410-dev/HTBToB-GoogleDriveTracker.git"
 }
