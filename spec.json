@@ -6,10 +6,10 @@
     "id": "htbtob-google-drive-tracker",
     "version": "1.0.0",
     "author": "LKS410",
-    "description": "A package that tracks the Google Drive of HTBToB",
+    "description": "CordOS System Foundation",
     "build": 1,
     "arch": "any",
-    "platform": "posix",
-    "scope": "$storage/commands",
+    "platform": "any",
+    "scope": "$storage/services",
     "git": "https://github.com/410-dev/HTBToB-GoogleDriveTracker.git"
 }
