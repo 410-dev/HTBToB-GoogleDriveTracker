@@ -19,7 +19,7 @@ def pullFileList():
     credentialJson = Registry.read("SOFTWARE.CordOS.Kernel.Services.GoogleDrive.Credentials", default="storage/services/GoogleDriveTracker/credentials.json", writeDefault=True)
     credentials = service_account.Credentials.from_service_account_file(credentialJson, scopes=['https://www.googleapis.com/auth/drive'])
     service = build("drive", "v3", credentials=credentials)
-    while True:
+    while IPC.canRepeatUntilShutdown():
         try:
             results = service.files().list(fields="files(name, kind, id, name, parents)").execute()
             items = results.get('files', [])
