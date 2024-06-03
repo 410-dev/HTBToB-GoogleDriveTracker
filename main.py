@@ -16,7 +16,7 @@ import time
 
 
 def pullFileList():
-    credentialJson = Registry.read("SOFTWARE.CordOS.Kernel.Services.GoogleDrive.Credentials", default="storage/services/GoogleDriveTracker/credentials.json", writeDefault=True)
+    credentialJson = Registry.read("SOFTWARE.CordOS.Kernel.Services.GoogleDrive.Credentials", default="storage/services/HTBToB-Google-Drive-Tracker/credentials.json", writeDefault=True)
     credentials = service_account.Credentials.from_service_account_file(credentialJson, scopes=['https://www.googleapis.com/auth/drive'])
     service = build("drive", "v3", credentials=credentials)
     while IPC.canRepeatUntilShutdown():
