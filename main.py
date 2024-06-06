@@ -109,7 +109,7 @@ def index(tree: dict) -> list:
     return searchNode(tree, [])
 
 
-def languageIdentify(filePath: str) -> str:
+def languageIdentify(filePathOrName: str) -> str:
     fileName = filePathOrName.split("/")[-1].rsplit('.', 1)[0]  # Exclude the file extension
     korean_count = sum(1 for c in fileName if '\uac00' <= c <= '\ud7a3')
     alpha_count = sum(1 for c in fileName if c.isalpha() and not ('\uac00' <= c <= '\ud7a3'))
