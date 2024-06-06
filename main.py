@@ -109,6 +109,21 @@ def index(tree: dict) -> list:
     return searchNode(tree, [])
 
 
+def languageIdentify(filePath: str) -> str:
+    fileName = filePathOrName.split("/")[-1].rsplit('.', 1)[0]  # Exclude the file extension
+    korean_count = sum(1 for c in fileName if '\uac00' <= c <= '\ud7a3')
+    alpha_count = sum(1 for c in fileName if c.isalpha() and not ('\uac00' <= c <= '\ud7a3'))
+    relevant_length = korean_count + alpha_count
+
+    if relevant_length == 0:
+        return "EN"  # Default to "en" if no relevant characters are found
+
+    if korean_count / relevant_length > 0.5:
+        return "KO"
+    else:
+        return "EN"
+
+
 def main():
     if not PartitionManager.RootFS.isFile(Registry.read("SOFTWARE.CordOS.Kernel.Services.GoogleDrive.Credentials", default="storage/services/GoogleDriveTracker/credentials.json")):
         Journaling.record("ERROR", "Missing credentials.json")
@@ -149,6 +164,7 @@ def main():
                     # outputStr += f"To: {dropRoot(item[2])}\n\n"
                     fileName = item[1].split("/")[-1]
                     pingTo = ""
+                    lang = languageIdentify(fileName)
                     if "Draft" in item[1]:
                         originalState = "Draft"
                     elif "Feedback Queue" in item[1]:
@@ -161,19 +177,19 @@ def main():
                         originalState = "Unsorted"
                     if "Draft" in item[2]:
                         newState = "Draft"
-                        pingTo = Registry.read("SOFTWARE.CordOS.Kernel.Services.GoogleDrive.PingWhenMovedToDraft", default="", writeDefault=True)
+                        pingTo = Registry.read(f"SOFTWARE.CordOS.Kernel.Services.GoogleDrive.{lang}.PingWhenMovedToDraft", default="", writeDefault=True)
                     elif "Feedback Queue" in item[2]:
                         newState = "Feedback Queue"
-                        pingTo = Registry.read("SOFTWARE.CordOS.Kernel.Services.GoogleDrive.PingWhenMovedToFeedbackQueue", default="", writeDefault=True)
+                        pingTo = Registry.read(f"SOFTWARE.CordOS.Kernel.Services.GoogleDrive.{lang}.PingWhenMovedToFeedbackQueue", default="", writeDefault=True)
                     elif "Archive" in item[2]:
                         newState = "Archive"
-                        pingTo = Registry.read("SOFTWARE.CordOS.Kernel.Services.GoogleDrive.PingWhenMovedToArchive", default="", writeDefault=True)
+                        pingTo = Registry.read(f"SOFTWARE.CordOS.Kernel.Services.GoogleDrive.{lang}.PingWhenMovedToArchive", default="", writeDefault=True)
                     elif "Published" in item[2]:
                         newState = "Published"
-                        pingTo = Registry.read("SOFTWARE.CordOS.Kernel.Services.GoogleDrive.PingWhenMovedToPublished", default="", writeDefault=True)
+                        pingTo = Registry.read(f"SOFTWARE.CordOS.Kernel.Services.GoogleDrive.{lang}.PingWhenMovedToPublished", default="", writeDefault=True)
                     else:
                         newState = "Unsorted"
-                        pingTo = Registry.read("SOFTWARE.CordOS.Kernel.Services.GoogleDrive.PingWhenMovedToUnsorted", default="", writeDefault=True)
+                        pingTo = Registry.read(f"SOFTWARE.CordOS.Kernel.Services.GoogleDrive.{lang}.PingWhenMovedToUnsorted", default="", writeDefault=True)
                     outputStr += f"「 {fileName} 」\n"
                     outputStr += f"From: {originalState}\n"
                     outputStr += f"To: {newState}\n\n"
