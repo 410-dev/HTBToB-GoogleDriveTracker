@@ -148,6 +148,7 @@ def main():
                     # outputStr += f"From: {dropRoot(item[1])}\n"
                     # outputStr += f"To: {dropRoot(item[2])}\n\n"
                     fileName = item[1].split("/")[-1]
+                    pingTo = ""
                     if "Draft" in item[1]:
                         originalState = "Draft"
                     elif "Feedback Queue" in item[1]:
@@ -160,14 +161,19 @@ def main():
                         originalState = "Unsorted"
                     if "Draft" in item[2]:
                         newState = "Draft"
+                        pingTo = Registry.read("SOFTWARE.CordOS.Kernel.Services.GoogleDrive.PingWhenMovedToDraft", default="", writeDefault=True)
                     elif "Feedback Queue" in item[2]:
                         newState = "Feedback Queue"
+                        pingTo = Registry.read("SOFTWARE.CordOS.Kernel.Services.GoogleDrive.PingWhenMovedToFeedbackQueue", default="", writeDefault=True)
                     elif "Archive" in item[2]:
                         newState = "Archive"
+                        pingTo = Registry.read("SOFTWARE.CordOS.Kernel.Services.GoogleDrive.PingWhenMovedToArchive", default="", writeDefault=True)
                     elif "Published" in item[2]:
                         newState = "Published"
+                        pingTo = Registry.read("SOFTWARE.CordOS.Kernel.Services.GoogleDrive.PingWhenMovedToPublished", default="", writeDefault=True)
                     else:
                         newState = "Unsorted"
+                        pingTo = Registry.read("SOFTWARE.CordOS.Kernel.Services.GoogleDrive.PingWhenMovedToUnsorted", default="", writeDefault=True)
                     outputStr += f"「 {fileName} 」\n"
                     outputStr += f"From: {originalState}\n"
                     outputStr += f"To: {newState}\n\n"
@@ -175,6 +181,13 @@ def main():
                     if originalState == newState:
                         outputStr = backupOutputStr
                         outputStr += f"**Renamed**\n{dropRoot(item[1])} -> {dropRoot(item[2])}\n\n"
+
+                    if pingTo != "":
+                        pingToList: list = pingTo.replace(", ", ",").split(",")
+                        pingTo = ""
+                        for pingToE in pingToList:
+                            pingTo += f"<@{pingToE}> "
+                        outputStr += f"**Notification**\n{pingTo}\n\n"
 
             originalIndex = newIndex
             try:

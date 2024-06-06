@@ -4,7 +4,7 @@
     "sdk": 1,
     "name": "HTBToB Google Drive Tracker",
     "id": "htbtob-google-drive-tracker",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "author": "LKS410",
     "description": "Google Drive Tracker for HTBToB Organization",
     "build": 2,
