@@ -1,3 +1,4 @@
+import json
 from typing import Any
 
 import kernel.webhook as Webhook
@@ -141,10 +142,17 @@ def main():
             pathComponents.pop(0)
         return "/".join(pathComponents)
 
+    lastFileList = {}
+    lastRestructuredList = {}
+    lastIndexed = []
+    lastDiff = []
+
     while IPC.canRepeatUntilShutdown():
         try:
             time.sleep(3)
-            newIndex = index(restructure(pullFileList()))
+            fileList = pullFileList()
+            restructured = restructure(fileList)
+            newIndex = index(restructured)
             diff = traceDifference(originalIndex, newIndex)
             outputStr = ""
             for item in diff:
@@ -210,6 +218,40 @@ def main():
                 if outputStr == "":
                     Journaling.record("INFO", "No changes detected")
                 else:
+
+                    if Registry.read("SOFTWARE.CordOS.Kernel.Services.GoogleDrive.RecordChanges", default="0", writeDefault=True) == "1":
+                        jsonData = {
+                            "orig": {
+                                "files": lastFileList,
+                                "restructured": lastRestructuredList,
+                                "indexed": lastIndexed,
+                                "diff": lastDiff
+                            },
+                            "new": {
+                                "files": fileList,
+                                "restructured": restructured,
+                                "indexed": newIndex,
+                                "diff": diff
+                            }
+                        }
+                        Journaling.record("INFO", "Recording changes")
+                        try:
+                            currentTime = time.time()
+                            with open(f"storage/changes-{currentTime}.json", "w") as f:
+                                f.write(json.dumps(jsonData, indent=4))
+                        except Exception as e:
+                            Journaling.record("ERROR", "Failed to record changes: " + str(e))
+                            import traceback
+                            traceback.print_exc()
+                            stackTrace = traceback.format_exc()
+                            Webhook.send(Registry.read("SOFTWARE.CordOS.Kernel.Services.GoogleDrive.WebhookURL", default="", writeDefault=True), "Warning: Failed to record changes. Stack trace:\n" + stackTrace)
+                            Webhook.send(Registry.read("SOFTWARE.CordOS.Kernel.Services.GoogleDrive.WebhookURL", default="", writeDefault=True), outputStr)
+                        lastFileList = fileList
+                        lastRestructuredList = restructured
+                        lastIndexed = newIndex
+                        lastDiff = diff
+
+
                     # Webhook.send(Registry.read("SOFTWARE.CordOS.Kernel.Services.GoogleDrive.WebhookURL", default="", writeDefault=True), outputStr)
                     webhookUrl = Registry.read("SOFTWARE.CordOS.Kernel.Services.GoogleDrive.WebhookURL", default="", writeDefault=True)
                     Journaling.record("INFO", f"Sending webhook (URL: {webhookUrl})")
